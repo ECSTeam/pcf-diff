@@ -11,11 +11,13 @@ configuration so that is not being shown.
 
 To run the following values need to be configured
 
-```# foundations to compare
+```
+# foundations to compare
 ops_mgr_host1=
 ops_mgr_usr1=
 ops_mgr_pwd1=
 
 ops_mgr_host2=
 ops_mgr_usr2=
-ops_mgr_pwd2=```
+ops_mgr_pwd2=
+```
