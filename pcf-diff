@@ -1,0 +1,249 @@
+#!/bin/bash -e
+
+# foundations to compare
+ops_mgr_host1=
+ops_mgr_usr1=
+ops_mgr_pwd1=
+
+ops_mgr_host2=
+ops_mgr_usr2=
+ops_mgr_pwd2=
+
+function get_compare_names {
+
+  # $1 - expands to names[@] !1 - expands to ${names[@]}
+  local names=(${!1})
+
+  for ((idx=0; idx<${#names[@]}; idx++)); do
+
+    # support for product names without a unique identifier
+    if [[ ${names[$idx]} != "p-bosh" ]]; then
+        # remove unique identifier in order to just compare product names
+        names[$idx]=${names[$idx]%-*}
+    fi
+
+  done
+
+  echo ${names[@]}
+}
+
+function array_contains {
+
+  local array=(${!1})
+  local seeking=$2
+  local pos=-1
+
+  for ((idx=0; idx<${#array[@]}; idx++)); do
+
+    element=${array[$idx]}
+
+    if [[ $element == $seeking ]]; then
+      pos=$idx
+      break
+    fi
+  done
+
+  echo $pos
+}
+
+prds1=$(om -k -t $ops_mgr_host1 -u $ops_mgr_usr1 \
+  -p $ops_mgr_pwd1 curl -path /api/v0/deployed/products -s)
+names1=($(echo $prds1 | jq -r '.[].installation_name'))
+compare_names1=($(get_compare_names names1[@]))
+
+prds2=$(om -k -t $ops_mgr_host2 -u $ops_mgr_usr2 \
+  -p $ops_mgr_pwd2 curl -path /api/v0/deployed/products -s)
+names2=($(echo $prds2 | jq -r '.[].installation_name'))
+compare_names2=($(get_compare_names names2[@]))
+
+#echo "names in foundation 1 => ${names1[@]}"
+#echo "compare names 1 => ${compare_names1[@]}"
+#echo "names in foundation 2 => ${names2[@]}"
+#echo "compare names 2 => ${compare_names2[@]}"
+
+version1=$(om -k -t $ops_mgr_host1 -u $ops_mgr_usr1 -p $ops_mgr_pwd1 \
+  curl -path /api/v0/diagnostic_report -s | jq -r '.versions.release_version')
+
+version2=$(om -k -t $ops_mgr_host2 -u $ops_mgr_usr2 -p $ops_mgr_pwd2 \
+  curl -path /api/v0/diagnostic_report -s | jq -r '.versions.release_version')
+
+echo -e "\n\ncomparing host: $ops_mgr_host1 version: $version1" \
+        "host: $ops_mgr_host2 version: $version2"
+
+for ((idx=0; idx<${#names1[@]}; idx++)); do
+
+  name=${names1[$idx]}
+
+  if [[ $name == "p-bosh" ]]; then
+    # remove the element so that only products left can be identified for
+    # each foundation being compared
+
+    position1=$(array_contains compare_names1[@] $name)
+    compare_names1=(${compare_names1[@]:0:$position1}
+      ${compare_names1[@]:$(($position1 + 1))})
+
+    position2=$(array_contains compare_names2[@] $name)
+    compare_names2=(${compare_names2[@]:0:$position2}
+      ${compare_names2[@]:$(($position2 + 1))})
+    names2=(${names2[@]:0:$position2}
+      ${names2[@]:$(($position2 + 1))})
+
+    continue
+  fi
+
+  # support for product names with a unique identifier
+  name=${name%-*}
+
+  position2=$(array_contains compare_names2[@] $name)
+
+  if [ $position2 -ge 0 ]; then
+
+    echo -e "\n\ncomparing product: $name"
+
+    # for now only comparing instance type, instances count and disk size, if a
+    # specific instance type is not selected it defaults to Automatic
+
+    jobs_res1=$(echo $(om -k -t $ops_mgr_host1 -u $ops_mgr_usr1 \
+      -p $ops_mgr_pwd1 \
+      curl -path /api/v0/staged/products/${names1[$idx]}/resources -s) |
+      jq -r .[])
+
+    jobs_res2=$(echo $(om -k -t $ops_mgr_host2 -u $ops_mgr_usr2 \
+      -p $ops_mgr_pwd2 \
+      curl -path /api/v0/staged/products/${names2[$position2]}/resources -s) |
+      jq -r .[])
+
+    # ensure the same jobs are compared
+    identifiers1=($(echo $jobs_res1 | jq -r .[] | jq -r .identifier))
+    identifiers2=($(echo $jobs_res2 | jq -r .[] | jq -r .identifier))
+
+    # base64 is required to handle blank spaces in description
+    read -a jobs1 <<<$(echo $jobs_res1 | jq -r '.[] | @base64')
+    read -a jobs2 <<<$(echo $jobs_res2 | jq -r '.[] | @base64')
+
+    for ((job_idx=0; job_idx<${#jobs1[@]}; job_idx++)); do
+
+      _jq() {
+        echo ${1} | base64 --decode | jq -r ${2}
+      }
+
+      identifier=$(echo $(_jq ${jobs1[$job_idx]} .identifier))
+
+      id_position2=$(array_contains identifiers2[@] $identifier)
+
+      if [ $id_position2 -ge 0 ]; then
+
+        echo "  comparing job: $identifier"
+
+        instances1=$(echo $(_jq ${jobs1[$job_idx]} .instances))
+        instances2=$(echo $(_jq ${jobs2[$id_position2]} .instances))
+
+        if [[ ${#instances1} -eq 0 ]]; then
+          instances1=$(echo "Automatic:" \
+            $(_jq ${jobs1[$job_idx]} .instances_best_fit))
+        fi
+        if [[ ${#instances2} -eq 0 ]]; then
+          instances2=$(echo "Automatic:" \
+            $(_jq ${jobs2[$id_position2]} .instances_best_fit))
+        fi
+
+        different=""
+        if [[ "$instances1" != "$instances2" ]]; then
+          different="*** DIFFERENT ***"
+        fi
+
+        printf "    host: %s instances: %-22s | " $ops_mgr_host1 "$instances1"
+        printf "host: %s instances: %-22s    %s\n" \
+          $ops_mgr_host2 "$instances2" "$different"
+
+        disk_size1=$(echo $(_jq ${jobs1[$job_idx]} .persistent_disk_mb))
+        disk_size2=$(echo $(_jq ${jobs2[$id_position2]} .persistent_disk_mb))
+
+        if [[ "$disk_size1" == "null" ]]; then
+          disk_size1="None"
+        fi
+        if [[ "$disk_size2" == "null" ]]; then
+          disk_size2="None"
+        fi
+
+        different=""
+        if [[ "$disk_size1" != "$disk_size2" ]]; then
+          different="*** DIFFERENT ***"
+        fi
+
+        printf "    host: %s disk size: %-22s | " $ops_mgr_host1 "$disk_size1"
+        printf "host: %s disk size: %-22s    %s\n" \
+          $ops_mgr_host2 "$disk_size2" "$different"
+
+        vm_type_id1=$(echo $(_jq ${jobs1[$job_idx]} .instance_type_id))
+        vm_type_id2=$(echo $(_jq ${jobs2[$id_position2]} .instance_type_id))
+
+        if [[ ${#vm_type_id1} -eq 0 ]]; then
+          vm_type_id1=$(echo "Automatic:" \
+            $(_jq ${jobs1[$job_idx]} .instance_type_best_fit))
+        fi
+        if [[ ${#vm_type_id2} -eq 0 ]]; then
+          vm_type_id2=$(echo "Automatic:" \
+            $(_jq ${jobs2[$id_position2]} .instance_type_best_fit))
+        fi
+
+        different=""
+        if [[ "$vm_type_id1" != "$vm_type_id2" ]]; then
+          different="*** DIFFERENT ***"
+        fi
+
+        printf "    host: %s vm type:   %-22s | " $ops_mgr_host1 "$vm_type_id1"
+        printf "host: %s vm type:   %-22s    %s\n" \
+          $ops_mgr_host2 "$vm_type_id2" $different
+
+        # remove the element so that only jobs left can be identified for
+        # each foundation being compared
+        id_position1=$(array_contains identifiers1[@] $identifier)
+        identifiers1=(${identifiers1[@]:0:$id_position1}
+          ${identifiers1[@]:$(($id_position1 + 1))})
+        identifiers2=(${identifiers2[@]:0:$id_position2}
+          ${identifiers2[@]:$(($id_position2 + 1))})
+        jobs2=(${jobs2[@]:0:$id_position2}
+          ${jobs2[@]:$(($id_position2 + 1))})
+      fi
+    done
+
+    if [[ ${#identifiers1[@]} -gt 0 || ${#identifiers2[@]} -gt 0 ]]; then
+      echo -e "\n"
+    fi
+
+    if [ ${#identifiers1[@]} -gt 0 ]; then
+      echo "  the following jobs only exists in $ops_mgr_host1 =>" \
+           "[${identifiers1[@]}]"
+    fi
+
+    if [ ${#identifiers2[@]} -gt 0 ]; then
+      echo "  the following jobs only exists in $ops_mgr_host2 =>" \
+           "[${identifiers2[@]}]"
+    fi
+
+    # remove the element so that only products left can be identified for
+    # each foundation being compared
+    position1=$(array_contains compare_names1[@] $name)
+    compare_names1=(${compare_names1[@]:0:$position1}
+      ${compare_names1[@]:$(($position1 + 1))})
+    compare_names2=(${compare_names2[@]:0:$position2}
+      ${compare_names2[@]:$(($position2 + 1))})
+    names2=(${names2[@]:0:$position2}
+      ${names2[@]:$(($position2 + 1))})
+  fi
+done
+
+if [[ ${#compare_names1[@]} -gt 0 || ${#compare_names2[@]} -gt 0 ]]; then
+  echo -e "\n"
+fi
+
+if [ ${#compare_names1[@]} -gt 0 ]; then
+  echo "the following products only exists in $ops_mgr_host1 =>" \
+       "[${compare_names1[@]}]"
+fi
+
+if [ ${#compare_names2[@]} -gt 0 ]; then
+  echo "the following products only exists in $ops_mgr_host2 =>" \
+       "[${compare_names2[@]}]"
+fi
