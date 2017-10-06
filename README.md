@@ -14,6 +14,7 @@ USAGE:
   pcf-diff <command> [<options>]
 
 COMMANDS <command>:
+  help:     display this help screen
   versions: list the product versions
   products: list only the product resource differences
 
