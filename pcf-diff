@@ -55,6 +55,25 @@ function array_contains {
   echo $pos
 }
 
+function get_prd_ver {
+
+  local prds=(${!1})
+  local name=$2
+  local ver=
+
+  for ((idx=0; idx<${#prds[@]}; idx++)); do
+
+    prd_name=$(echo ${prds[$idx]} | jq -r .name)
+
+    if [[ $prd_name == $name ]]; then
+      ver=$(echo ${prds[$idx]} | jq -r .version)
+      break
+    fi
+  done
+
+  echo $ver
+}
+
 function diff_ver {
 
   read -a prds1 <<<$(om -k -t $ops_mgr_host1 -u $ops_mgr_usr1 \
@@ -75,9 +94,9 @@ function diff_ver {
 
     if [ $position2 -ge 0 ]; then
 
-      printf "  host: %s product: %-23s release: %-15s | " \
+      printf "  host: %s product: %-28s release: %-15s | " \
         $ops_mgr_host1 $name $(echo ${prds1[$idx]} | jq -r .version)
-      printf "  host: %s product: %-23s release: %-15s\n" \
+      printf "  host: %s product: %-28s release: %-15s\n" \
         $ops_mgr_host2 $name $(echo ${prds2[$position2]} | jq -r .version)
 
       # remove the element so that only products left can be identified for
@@ -94,18 +113,30 @@ function diff_ver {
     fi
   done
 
-  if [[ ${#names1[@]} -gt 0 || ${#names2[@]} -gt 0 ]]; then
-    echo -e "\n"
-  fi
-
   if [ ${#names1[@]} -gt 0 ]; then
-    echo "the following products only exists in $ops_mgr_host1 =>" \
-         "[${names1[@]}]"
+
+    echo -e "\nthe following products only exists in $ops_mgr_host1:"
+
+    for ((idx=0; idx<${#names1[@]}; idx++)); do
+
+      name=${names1[$idx]}
+
+      printf "  product: %-28s release: %-15s\n" \
+        $name $(get_prd_ver prds1[@] $name)
+    done
   fi
 
   if [ ${#names2[@]} -gt 0 ]; then
-    echo "the following products only exists in $ops_mgr_host2 =>" \
-         "[${names2[@]}]"
+
+    echo -e "\nthe following products only exists in $ops_mgr_host2:"
+
+    for ((idx=0; idx<${#names2[@]}; idx++)); do
+
+      name=${names2[$idx]}
+
+      printf "  product: %-28s release: %-15s\n" \
+        $name $(get_prd_ver prds2[@] $name)
+    done
   fi
 }
 
@@ -332,6 +363,7 @@ USAGE:
   pcf-diff <command> [<options>]
 
 COMMANDS <command>:
+  help:     display this help screen
   versions: list the product versions
   products: list only the product resource differences
 
