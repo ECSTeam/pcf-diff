@@ -1,0 +1,50 @@
+---
+resource_types:
+- name: slack-notification
+  type: docker-image
+  source:
+    repository: cfcommunity/slack-notification-resource
+    tag: latest
+
+resources:
+- name: pcf-repo
+  type: git
+  source:
+    uri: https://github.com/ECSTeam/pcf-diff
+    branch: master
+    access_token: ((git-srv-password))
+    ignore_paths:
+    - README.md
+    - .gitignore
+    - ci/pipeline.yml
+
+- name: slack
+  type: slack-notification
+  source:
+    url: ((slack_notification_url))
+
+jobs:
+- name: test-pcf-diff
+  on_failure:
+    <<: *notify_slack
+  on_success:
+    put: slack
+    params:
+      text: "'$BUILD_PIPELINE_NAME' build successful: $ATC_EXTERNAL_URL/builds/$BUILD_ID"
+  plan:
+  - get: pcf-repo
+    trigger: true
+  - task: test-pcf
+    file: pcf-repo/ci/test-pcf-diff.yml
+    params:
+      OPSMAN_HOST: ((opsman_host1))
+      OPSMAN_USERNAME: ((opsman_username1))
+      OPSMAN_PASSWORD: ((opsman_password1))
+      OPSMAN_HOST: ((opsman_host2))
+      OPSMAN_USERNAME: ((opsman_username2))
+      OPSMAN_PASSWORD: ((opsman_password2))
+
+notify_slack: &notify_slack
+  put: slack
+  params:
+    text: "'$BUILD_PIPELINE_NAME' build failed for job '$BUILD_JOB_NAME': $ATC_EXTERNAL_URL/builds/$BUILD_ID"

@@ -1,0 +1,21 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: ruby
+
+inputs:
+  - name: pcf-repo
+
+params:
+  OPSMAN_HOST1:
+  OPSMAN_USERNAME1:
+  OPSMAN_PASSWORD1:
+  OPSMAN_HOST2:
+  OPSMAN_USERNAME2:
+  OPSMAN_PASSWORD2:
+
+run:
+  path: pcf-repo/ci/test-pcf-diff.sh
