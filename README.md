@@ -1,5 +1,5 @@
 # pcf-diff
-compares product and jobs (Resource Config) between PCF foundations
+Compares product and jobs (Resource Config) between PCF foundations.
 It also lists the products and jobs that exist in one foundation and not the other.
 It displays the jobs’ instances, disk size, and vm type for both foundations and an
 indicator when they are different. Currently it reflects a difference between when a
