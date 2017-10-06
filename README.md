@@ -26,7 +26,7 @@ OPTIONS:
   -u2,--username2  Ops Manager admin username of PCF foundation two, prompt if not specified
   -p2,--password2  Ops Manager admin password of PCF foundation two, prompt if not specified
 ```
-Versions example output:
+versions example output:
 
 ```
 product versions
@@ -39,7 +39,7 @@ product versions
 
 the following products only exists in 172.28.31.5 => [p-isolation-segment-spoke-b p-isolation-segment-spoke-a p-isolation-segment-spoke-c p-metrics pivotal-mysql]
 ```
-Product differences example output:
+products example output:
 ```
 comparing host: 177.28.31.5 version: 1.11.10.0 host: 177.28.41.5 version: 1.8.16.0
 
