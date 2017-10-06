@@ -44,7 +44,7 @@ products example output:
 comparing host: 177.28.31.5 version: 1.11.10.0 host: 177.28.41.5 version: 1.8.16.0
 
 
-comparing product: cf SHOWING ONLY DIFFERENCES
+comparing product: cf          SHOWING ONLY DIFFERENCES
   comparing job: consul_server
     host: 177.28.31.5 instances: 1                      | host: 177.28.41.5 instances: Automatic: 1              *** DIFFERENT ***
   comparing job: nats
