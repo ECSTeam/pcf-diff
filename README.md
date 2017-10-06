@@ -4,7 +4,7 @@ It also lists the products and jobs that exist in one foundation and not the oth
 It displays the jobs’ instances, disk size, and vm type for both foundations and an
 indicator when they are different. Currently it reflects a difference between when a
 value has been selected and the Automatic value even if they are the same
-(i.e. host: 172.28.61.5 instances: Automatic: 1 | host: 172.28.71.5 instances: 1    *** DIFFERENT ***).
+(i.e. host: 177.28.31.5 instances: Automatic: 1 | host: 177.28.41.5 instances: 1    *** DIFFERENT ***).
 
 It utilizes the om cli and jq, unfortunately the om cli can not be used to retrieve the director’s
 configuration so that is not being shown.
@@ -37,7 +37,7 @@ product versions
   host: 177.28.31.5 product: p-spring-cloud-services release: 1.4.0           |   host: 177.28.41.5 product: p-spring-cloud-services release: 1.3.3
 
 
-the following products only exists in 172.28.31.5 => [p-isolation-segment-spoke-b p-isolation-segment-spoke-a p-isolation-segment-spoke-c p-metrics pivotal-mysql]
+the following products only exists in 177.28.31.5 => [p-isolation-segment-spoke-b p-isolation-segment-spoke-a p-isolation-segment-spoke-c p-metrics pivotal-mysql]
 ```
 products example output:
 ```
