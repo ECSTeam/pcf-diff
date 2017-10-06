@@ -16,6 +16,8 @@ ops_mgr_host2=
 ops_mgr_usr2=
 ops_mgr_pwd2=
 
+show_all=false
+
 function get_compare_names {
 
   # $1 - expands to names[@] !1 - expands to ${names[@]}
@@ -73,9 +75,9 @@ function diff_ver {
 
     if [ $position2 -ge 0 ]; then
 
-      printf "  host: %s product: %-23s release: %-14s | " \
+      printf "  host: %s product: %-23s release: %-15s | " \
         $ops_mgr_host1 $name $(echo ${prds1[$idx]} | jq -r .version)
-      printf "  host: %s product: %-23s release: %-14s\n" \
+      printf "  host: %s product: %-23s release: %-15s\n" \
         $ops_mgr_host2 $name $(echo ${prds2[$position2]} | jq -r .version)
 
       # remove the element so that only products left can be identified for
@@ -108,8 +110,6 @@ function diff_ver {
 }
 
 function diff_prd_res {
-
-  show_all=$1
 
   prds1=$(om -k -t $ops_mgr_host1 -u $ops_mgr_usr1 \
     -p $ops_mgr_pwd1 curl -path /api/v0/deployed/products -s)
@@ -162,13 +162,11 @@ function diff_prd_res {
 
     if [ $position2 -ge 0 ]; then
 
-      msg="\n\ncomparing product: $name"
-
       if [[ $show_all == false ]]; then
-        msg+=" SHOWING ONLY DIFFERENCES"
+        echo -e "\n\ncomparing product: $name          SHOWING ONLY DIFFERENCES"
+      else
+        echo -e "\n\ncomparing product: $name"
       fi
-
-      echo -e $msg
 
       # for now only comparing instance type, instances count and disk size, if a
       # specific instance type is not selected it defaults to Automatic
@@ -334,11 +332,11 @@ USAGE:
   pcf-diff <command> [<options>]
 
 COMMANDS <command>:
-  prd-ver:      list the product versions
-  prd-res:      list all product resources and differences
-  prd-res-diff: list only the product resources differences
+  versions: list the product versions
+  products: list only the product resource differences
 
 OPTIONS:
+  -a,--all         list all product resources
   -n1,--hostname1  Ops Manager host name or IP address of PCF foundation one," \
   "prompt if not specified
   -u1,--username1  Ops Manager admin username of PCF foundation one," \
@@ -357,30 +355,33 @@ function process_args {
 		key="$1"
 
     case "$key" in
-        -n1|--hostname1)
-				shift
-        ops_mgr_host1="$1"
-        ;;
-        -u1|--username1)
-				shift
-        ops_mgr_usr1="$1"
-        ;;
-				-p1|--password1)
-        shift
-        ops_mgr_pwd1="$1"
-        ;;
-        -n2|--hostname2)
-				shift
-        ops_mgr_host2="$1"
-        ;;
-        -u2|--username2)
-				shift
-        ops_mgr_usr2="$1"
-        ;;
-				-p2|--password2)
-        shift
-        ops_mgr_pwd2="$1"
-        ;;
+      -a|--all)
+      show_all=true
+      ;;
+      -n1|--hostname1)
+			shift
+      ops_mgr_host1="$1"
+      ;;
+      -u1|--username1)
+			shift
+      ops_mgr_usr1="$1"
+      ;;
+			-p1|--password1)
+      shift
+      ops_mgr_pwd1="$1"
+      ;;
+      -n2|--hostname2)
+			shift
+      ops_mgr_host2="$1"
+      ;;
+      -u2|--username2)
+			shift
+      ops_mgr_usr2="$1"
+      ;;
+			-p2|--password2)
+      shift
+      ops_mgr_pwd2="$1"
+      ;;
     esac
 
     # Shift after checking all the cases to get the next option
@@ -418,16 +419,12 @@ fi
 shift
 process_args "$@"
 
-if [ $command == "prd-ver" ]; then
+if [ $command == "versions" ]; then
 
   diff_ver
 
-elif [ $command == "prd-res" ]; then
+elif [ $command == "products" ]; then
 
-  diff_prd_res true
-
-elif [ $command == "prd-res-diff" ]; then
-
-  diff_prd_res false
+  diff_prd_res
 
 fi
