@@ -37,12 +37,12 @@ jobs:
   - task: test-pcf-diff
     file: repo/ci/test-pcf-diff.yml
     params:
-      OPSMAN_HOST: ((opsman_host1))
-      OPSMAN_USERNAME: ((opsman_username1))
-      OPSMAN_PASSWORD: ((opsman_password1))
-      OPSMAN_HOST: ((opsman_host2))
-      OPSMAN_USERNAME: ((opsman_username2))
-      OPSMAN_PASSWORD: ((opsman_password2))
+      OPSMAN_HOST1: ((opsman_host1))
+      OPSMAN_USERNAME1: ((opsman_username1))
+      OPSMAN_PASSWORD1: ((opsman_password1))
+      OPSMAN_HOST2: ((opsman_host2))
+      OPSMAN_USERNAME2: ((opsman_username2))
+      OPSMAN_PASSWORD2: ((opsman_password2))
 
 notify_slack: &notify_slack
   put: slack
