@@ -55,7 +55,7 @@ function array_contains {
   echo $pos
 }
 
-function get_prd_ver {
+function get_product_version {
 
   local prds=(${!1})
   local name=$2
@@ -74,7 +74,7 @@ function get_prd_ver {
   echo $ver
 }
 
-function diff_ver {
+function diff_versions {
 
   read -a prds1 <<<$(om -k -t $ops_mgr_host1 -u $ops_mgr_usr1 \
     -p $ops_mgr_pwd1 curl -path /api/v0/diagnostic_report -s |
@@ -122,7 +122,7 @@ function diff_ver {
       name=${names1[$idx]}
 
       printf "  product: %-28s release: %-15s\n" \
-        $name $(get_prd_ver prds1[@] $name)
+        $name $(get_product_version prds1[@] $name)
     done
   fi
 
@@ -135,12 +135,12 @@ function diff_ver {
       name=${names2[$idx]}
 
       printf "  product: %-28s release: %-15s\n" \
-        $name $(get_prd_ver prds2[@] $name)
+        $name $(get_product_version prds2[@] $name)
     done
   fi
 }
 
-function diff_prd_res {
+function diff_products {
 
   prds1=$(om -k -t $ops_mgr_host1 -u $ops_mgr_usr1 \
     -p $ops_mgr_pwd1 curl -path /api/v0/deployed/products -s)
@@ -453,10 +453,10 @@ process_args "$@"
 
 if [ $command == "versions" ]; then
 
-  diff_ver
+  diff_versions
 
 elif [ $command == "products" ]; then
 
-  diff_prd_res
+  diff_products
 
 fi

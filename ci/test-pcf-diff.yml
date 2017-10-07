@@ -4,10 +4,10 @@ platform: linux
 image_resource:
   type: docker-image
   source:
-    repository: ruby
+    repository: czero/cflinuxfs2
 
 inputs:
-  - name: pcf-repo
+  - name: repo
 
 params:
   OPSMAN_HOST1:
@@ -18,4 +18,4 @@ params:
   OPSMAN_PASSWORD2:
 
 run:
-  path: pcf-repo/ci/test-pcf-diff.sh
+  path: repo/ci/test-pcf-diff.sh

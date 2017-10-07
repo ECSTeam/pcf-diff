@@ -7,7 +7,7 @@ resource_types:
     tag: latest
 
 resources:
-- name: pcf-repo
+- name: repo
   type: git
   source:
     uri: https://github.com/ECSTeam/pcf-diff
@@ -32,10 +32,10 @@ jobs:
     params:
       text: "'$BUILD_PIPELINE_NAME' build successful: $ATC_EXTERNAL_URL/builds/$BUILD_ID"
   plan:
-  - get: pcf-repo
+  - get: repo
     trigger: true
-  - task: test-pcf
-    file: pcf-repo/ci/test-pcf-diff.yml
+  - task: test-pcf-diff
+    file: repo/ci/test-pcf-diff.yml
     params:
       OPSMAN_HOST: ((opsman_host1))
       OPSMAN_USERNAME: ((opsman_username1))
