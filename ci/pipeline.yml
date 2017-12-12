@@ -12,7 +12,7 @@ resources:
   source:
     uri: https://github.com/ECSTeam/pcf-diff
     branch: master
-    access_token: ((git-srv-password))
+    access_token: ((git-svc-password))
     ignore_paths:
     - README.md
     - .gitignore
